@@ -1,14 +1,20 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 
-import { Observable } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { Flight } from '../models/flight';
 
 @Injectable({
   providedIn: 'root',
 })
 export class FlightService {
+  
   flights: Flight[] = [];
+
+  private flightsSubject = new BehaviorSubject<Flight[]>([]);
+  readonly flights$ = this.flightsSubject.asObservable();
+
+
   baseUrl = `http://www.angular.at/api`;
   // baseUrl = `http://localhost:3000`;
 
@@ -17,12 +23,17 @@ export class FlightService {
   constructor(private http: HttpClient) {}
 
   load(from: string, to: string, urgent: boolean): void {
+    
     this.find(from, to, urgent).subscribe({
       next: (flights) => {
+
         this.flights = flights;
+        this.flightsSubject.next(flights);
+
       },
       error: (err) => console.error('Error loading flights', err),
     });
+
   }
 
   find(
@@ -68,7 +79,16 @@ export class FlightService {
     const oldDate = new Date(oldFlight.date);
 
     // Mutable
-    oldDate.setTime(oldDate.getTime() + 15 * ONE_MINUTE);
-    oldFlight.date = oldDate.toISOString();
+    // oldDate.setTime(oldDate.getTime() + 15 * ONE_MINUTE);
+    // oldFlight.date = oldDate.toISOString();
+
+    const newDate = new Date(oldDate.getTime() +  15 * ONE_MINUTE);
+    const newFlight: Flight = { ...oldFlight, date: newDate.toISOString() };
+    const newFlights: Flight[] = [ newFlight, ...oldFlights.slice(1) ];
+    
+    this.flights = newFlights;
+    this.flightsSubject.next(newFlights);
+
+  
   }
 }
